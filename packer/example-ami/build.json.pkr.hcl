@@ -74,4 +74,10 @@ build {
     user             = "ubuntu"
   }
 
+  # This is how one can run shell command directly on the target machine
+  # Check https://developer.hashicorp.com/packer/docs/provisioners/shell#script for more info
+  # provisioner "shell" {
+  #   inline = ["echo foo"]
+  # }
+
 }
