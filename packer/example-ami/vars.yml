@@ -1,0 +1,11 @@
+---
+system_swap_enabled: yes
+pip_install_packages:
+  - name: awscli
+    version: "1.25.59"
+  - name: setuptools
+    version: "58"
+
+pip_executable: pip
+
+docker_version: 5:20.10.17~3-0~ubuntu-bionic

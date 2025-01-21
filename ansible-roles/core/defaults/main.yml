@@ -1,0 +1,10 @@
+---
+
+workdir: /usr/local
+
+ulimit_config: []
+ulimit_config_location: /etc/security/limits.conf
+sysctl_config_location: /etc/sysctl.conf
+
+system_swap_enabled: no
+system_swap_size: 1GB

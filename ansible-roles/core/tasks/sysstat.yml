@@ -1,0 +1,30 @@
+---
+- block:
+  - name: Install sysstat packages
+    become: yes
+    apt:
+      name: sysstat
+      state: present
+      update_cache: yes
+      cache_valid_time: "{{ apt_cache_valid_time | default(omit) }}"
+      install_recommends: no
+    with_items:
+      - "sysstat"
+    tags:
+      - core:sysstat:install
+
+  - name: Copy sysstat default configuration
+    template:
+      src: sysstat.j2
+      dest: /etc/default/sysstat
+      backup: no
+      mode: "0644"
+    tags:
+      - core:sysstat:install
+
+  - name: Restart service
+    systemd:
+      name: sysstat
+      state: restarted
+  tags:
+    - core:sysstat

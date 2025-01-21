@@ -1,0 +1,64 @@
+---
+- block:
+  - name: create swap dir
+    file:
+      state: directory
+      path: /swap
+
+  - name: validate swap
+    template:
+      src: swap.txt.j2
+      dest: /swap/swap.txt
+      owner: root
+      group: root
+      mode: 0644
+    register: swap_txt
+
+  - name: disable swapfile
+    command: swapoff -a
+    when: swap_txt.changed
+
+  - name: remove swapfile
+    file:
+      path: /swap/swapfile
+      state: absent
+    when: swap_txt.changed
+
+  - name: write swapfile
+    command: fallocate -l {{ system_swap_size }} /swap/swapfile creates=/swap/swapfile
+    register: write_swapfile
+
+  - name: set swapfile permissions
+    file:
+      path: /swap/swapfile
+      mode: 0600
+
+  - name: create swapfile
+    command: mkswap /swap/swapfile
+    register: create_swapfile
+    when: write_swapfile.changed
+
+  - name: enable swapfile
+    command: swapon /swap/swapfile
+    when: write_swapfile.changed
+
+  - name: add swapfile to /etc/fstab
+    lineinfile:
+      dest: /etc/fstab
+      line: /swap/swapfile   none    swap    sw    0   0
+      state: present
+
+  - name: ensure sysctl swap file exists
+    template:
+      src: swap.sysctl.j2
+      dest: /etc/sysctl.d/99-swap.conf
+      owner: root
+      group: root
+      mode: 0644
+    register: swap_sysctl
+
+  - name: reload sysctl
+    command: sysctl -p
+    when: swap_sysctl.changed
+  tags:
+   - system:swap

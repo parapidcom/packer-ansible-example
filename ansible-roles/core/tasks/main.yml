@@ -1,0 +1,12 @@
+---
+- import_tasks: system.yml
+  tags: core:system
+- include_tasks: swap.yml
+  when: system_swap_enabled
+  tags: system:swap
+- import_tasks: rsyslog.yml
+  tags: core:rsyslog
+- import_tasks: statslogger.yml
+  tags: core:statslogger
+- include_tasks: sysstat.yml
+  tags: core:sysstat

@@ -1,0 +1,173 @@
+---
+# - name: update apt
+#   apt:
+#     update_cache: yes
+#     cache_valid_time: 3600
+
+- name: install deps
+  apt:
+    pkg: "{{ item }}"
+    state: present
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+
+- name: add docker apt key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    state: present
+  register: add_repository_key
+  ignore_errors: true
+
+- name: add docker apt key (alternative for older systems without SNI)
+  shell: "curl -sSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
+  args:
+    warn: no
+  when: add_repository_key is failed
+  check_mode: no
+
+- name: add docker repository
+  apt_repository:
+    repo: "{{ docker_apt_repository }}"
+    state: present
+    update_cache: yes
+
+- name: check if docker is already installed
+  command: dpkg -s docker-ce
+  register: is_installed
+  ignore_errors: yes
+  changed_when: no
+  check_mode: no
+
+- name: create docker group
+  group:
+    name: docker
+    state: present
+
+- name: create {{ docker_group }} group
+  group:
+    name: "{{ docker_group }}"
+    state: present
+  register: docker_group_created
+
+- name: create {{ docker_user }} user
+  user:
+    name: "{{ docker_user }}"
+    group: "{{ docker_group }}"
+    system: yes
+  when: docker_group_created is changed
+
+- name: add {{ docker_user }} user to docker group
+  user:
+    name: "{{ docker_user }}"
+    groups: docker
+    append: yes
+
+- name: add ubuntu user to docker group
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+- name: get user id
+  command: "id -u {{ docker_user }}"
+  register: docker_user_id
+  changed_when: no
+  when: docker_userns
+  check_mode: no
+
+- name: get group id
+  command: "id -g {{ docker_group }}"
+  register: docker_group_id
+  changed_when: no
+  when: docker_userns
+  check_mode: no
+
+- name: setup subuid
+  lineinfile:
+    insertbefore: CH
+    state: present
+    line: "{{ docker_user }}:{{ docker_user_id.stdout }}:{{ docker_user_id.stdout }}00"
+    dest: /etc/subuid
+    mode: 0644
+    create: yes
+  when: docker_userns
+
+- name: setup subgid
+  lineinfile:
+    insertbefore: CH
+    state: present
+    line: "{{ docker_group }}:{{ docker_group_id.stdout }}:{{ docker_group_id.stdout }}00"
+    dest: /etc/subgid
+    mode: 0644
+    create: yes
+  when: docker_userns
+
+- name: creates config directory
+  file:
+    path: /etc/docker
+    state: directory
+
+- name: setup daemon.json config
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: 0644
+  register: daemon_config
+
+- name: alter grub file and enable swapaccounting for docker
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX="(.*)"$'
+    line: 'GRUB_CMDLINE_LINUX="\1 cgroup_enable=memory swapaccount=1"'
+    backrefs: yes
+  when: is_installed.rc > 0
+
+- name: update grub
+  command: update-grub
+  when: is_installed.rc > 0
+  check_mode: no
+
+- name: install docker
+  apt:
+    pkg: docker-ce={{ docker_version }}
+    state: present
+  register: install_docker
+
+- name: check if rexray/ebs is installed
+  command: docker plugin inspect rexray/ebs
+  ignore_errors: yes
+  changed_when: no
+  register: rexray_installed
+  check_mode: no
+
+- name: install rexray/ebs
+  command: docker plugin install rexray/ebs --grant-all-permissions
+  ignore_errors: yes
+  when: rexray_installed.rc > 0
+
+- name: disable docker service
+  systemd:
+    name: docker
+    enabled: no
+  when: is_installed.rc > 0
+
+- name: check if systemd service is running
+  shell: systemctl is-active docker
+  register: service_status
+  ignore_errors: yes
+  changed_when: no
+  check_mode: no
+
+- name: reload systemd service
+  systemd:
+    name: docker
+    daemon_reload: yes
+  when: (daemon_config.changed or install_docker.changed) and service_status.stdout != "inactive"
+
+- name: restart service
+  systemd:
+    name: docker
+    state: restarted
+  when: (daemon_config.changed or install_docker.changed) and service_status.stdout != "inactive"

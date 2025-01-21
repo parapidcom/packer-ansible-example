@@ -1,0 +1,7 @@
+---
+docker_version: 5:20.10.17~3-0~ubuntu-bionic
+docker_apt_repository: "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+docker_userns: no
+docker_user: ubuntu
+docker_group: ubuntu
+docker_live_restore: "true"

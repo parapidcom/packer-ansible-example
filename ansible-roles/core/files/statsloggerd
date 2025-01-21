@@ -1,0 +1,7 @@
+#!/bin/bash
+
+while true; do
+  nice -n 19 ionice -c3 -t statslogger system_cpu 2>&1 | tee -a /var/log/statslogger/system_cpu.log &
+  nice -n 19 ionice -c3 -t statslogger system_memory 2>&1 | tee -a /var/log/statslogger/system_memory.log &
+  sleep 3
+done

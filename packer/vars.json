@@ -1,0 +1,7 @@
+{
+  "region": "us-east-1",
+  "instance_type": "c5.large",
+  "owners": "099720109477",
+  "stage": "prod",
+  "subnet_id": "subnet-0dbe0877587ed407c"
+}

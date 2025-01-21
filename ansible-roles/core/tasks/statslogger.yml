@@ -1,0 +1,58 @@
+---
+- block:
+  - name: copy statslogger
+    copy:
+      src: statslogger
+      dest: /usr/local/bin/statslogger
+      owner: root
+      group: root
+      mode: 0744
+    register: statslogger_script
+
+  - name: copy statsloggerd
+    copy:
+      src: statsloggerd
+      dest: /usr/local/bin/statsloggerd
+      owner: root
+      group: root
+      mode: 0744
+    register: statsloggerd_script
+
+  - name: create log dir
+    file:
+      state: directory
+      path: /var/log/statslogger
+
+  - name: copy statslogger unit file
+    template:
+      src: statslogger.service.j2
+      dest: /etc/systemd/system/statslogger.service
+      mode: 0655
+    register: systemd_script
+
+  - name: setup statslogger logrotate
+    template:
+      src: statslogger.logrotate.j2
+      dest: /etc/logrotate.d/statslogger
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: reload systemd service
+    systemd:
+      name: statslogger
+      daemon_reload: yes
+    when: systemd_script.changed or statsloggerd_script.changed
+
+  - name: enable statslogger service
+    systemd:
+      name: statslogger
+      enabled: yes
+
+  - name: restart service
+    systemd:
+      name: statslogger
+      state: restarted
+    when: systemd_script.changed or statslogger_script.changed or statsloggerd_script.changed
+  tags:
+    - core:statslogger

@@ -1,0 +1,10 @@
+/var/log/statslogger/*.log {
+    daily
+    rotate 10
+    maxsize 500
+    copytruncate
+    delaycompress
+    compress
+    notifempty
+    missingok
+}

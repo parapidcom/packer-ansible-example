@@ -1,0 +1,12 @@
+- name: setup /var/log/all
+  copy:
+    src: rsyslog-all.conf
+    dest: /etc/rsyslog.d/33-all.conf
+
+- name: setup logrotate for /var/log/all
+  copy:
+    src: logrotate-all.conf
+    dest: /etc/logrotate.d/all
+    owner: root
+    group: root
+    mode: 0644

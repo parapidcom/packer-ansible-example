@@ -1,0 +1,10 @@
+{
+{% if docker_userns %}
+  "userns-remap": "{{ docker_user }}:{{ docker_group }}",
+{% endif %}
+  "dns": [
+    "172.17.0.1"
+  ],
+  "storage-driver": "overlay2",
+  "live-restore": {{ docker_live_restore }}
+}

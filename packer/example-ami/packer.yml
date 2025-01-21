@@ -1,0 +1,33 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  pre_tasks:
+    - name: Wait 1 min for apt update to finish (increase or decrease if you see failures on lock for dpkg)
+      wait_for:
+        timeout: 60
+    - name: clear cache
+      become: true
+      raw: sudo apt-get clean
+    - name: clear apt list
+      become: true
+      raw: sudo rm -fr /var/lib/apt/lists/*
+    - name: Update all packages to their latest version
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+  vars_files:
+    - vars.yml
+  roles:
+    - role: ../../ansible-roles/pip
+      tags: pip
+    - role: ../../ansible-roles/core
+      tags: core
+    - role: ../../ansible-roles/docker
+      tags: core
+  post_tasks:
+    - name: disable docker service
+      systemd:
+        name: docker
+        enabled: no

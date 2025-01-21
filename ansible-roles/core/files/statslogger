@@ -1,0 +1,31 @@
+#!/bin/bash
+
+d=$(date)
+
+if [[ "$1" == "system_cpu" ]]; then
+  echo "$d: TOP 10 CPU"
+  ps -Ao pid,user,comm,pcpu,pmem,tty --sort=-pcpu | head -n 10
+  echo " "
+elif [[ "$1" == "system_memory" ]]; then
+  echo "$d: TOP 10 MEMORY"
+  ps -Ao pid,user,comm,pcpu,pmem,tty --sort=-pmem | head -n 10
+  echo " "
+elif [[ "$1" == "system_pid" ]]; then
+  echo "$d: TOP 10 PID"
+  FD_TOP_10_PROC=$(lsof -Fpcn | nawk '
+  /^p/ { pid=substr($0,2) }
+  /^c/ { cmd=substr($0,2) }
+  /^n/ { fd[cmd"["pid"]"]++ }
+  END  { for (cc in fd) printf("%-20s %i\n",cc,fd[cc]) } ' | sort -n -k 2 -r | head -n 10)
+
+  while read -r line; do
+    PID=$(echo "$line" | awk -F'\[' '{print $2}' 2>/dev/null | awk -F'\]' '{print $1}' 2>/dev/null)
+    CMD=$(ps aux |grep -P "^[^ ]+ +$PID " | awk '{ print substr($0, index($0,$11)) }')
+    echo "$line     $CMD"
+  done <<< "$FD_TOP_10_PROC"
+  echo " "
+elif [[ "$1" == "docker_cpu" ]]; then
+  docker stats --no-stream --format "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | sort -k 3 -h -r | head -n 10
+elif [[ "$1" == "docker_memory" ]]; then
+  docker stats --no-stream --format "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | sort -k 4 -h -r | head -n 10
+fi

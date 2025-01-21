@@ -1,0 +1,59 @@
+---
+- block:
+  - name: Install packages
+    register: apt_status
+    until: apt_status is success
+    delay: 6
+    retries: 10
+    apt:
+      pkg: "{{ item }}"
+      state: latest
+      update_cache: no
+      cache_valid_time: 3600
+    with_items:
+      - ncdu
+      - htop
+      - iotop
+      - iftop
+      - dirmngr
+      - unzip
+      - jq
+      - joe
+      - ack
+      - sshguard
+
+  - name: Create ulimit configuration
+    template:
+      src: limits.conf.j2
+      dest: "{{ ulimit_config_location }}"
+    tags:
+      - core:system:ulimit
+
+  - name: Create sysctl configuration
+    template:
+      src: sysctl.conf.j2
+      dest: "{{ sysctl_config_location }}"
+    tags:
+      - core:system:sysctl
+
+  - name: Generate system language packs US
+    locale_gen:
+      name: en_US.UTF-8
+      state: present
+
+  - name: Generate system language packs GB
+    locale_gen:
+      name: en_GB.UTF-8
+      state: present
+
+  - name: set timezone to UTC
+    timezone:
+      name: UTC
+
+  - name: Force color prompt
+    lineinfile: dest="{{ item }}" regexp="^force_color_prompt" line="force_color_prompt=yes"
+    with_items:
+      - "/root/.bashrc"
+      - "/home/ubuntu/.bashrc"
+  tags:
+    - core:system
